@@ -281,6 +281,7 @@ class ProductOrderController extends Controller
                     ]
                 ]
             );
+            
             return $redirect_url = nimbbl_gateway()->charge_customer($order_data);
         }
 
