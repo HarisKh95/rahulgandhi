@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use KingFlamez\Rave\Facades\Rave;
 use Unicodeveloper\Paystack\Facades\Paystack;
+use App\Http\Controllers\Product\Session;
 use Nimbbl\Api\NimbblApi;
+use phpDocumentor\Reflection\Types\Null_;
 
 class ProductOrderController extends Controller
 {
@@ -247,7 +249,7 @@ class ProductOrderController extends Controller
 
             $order_data = array(
                 'referrer_platform' => 'referrer_platform',
-                'merchant_shopfront_domain' => 'http://example.com',
+                'merchant_shopfront_domain' => 'http://localhost/rahulgandhi',
                 'invoice_id' => 'merchant-order-id',
                 'order_date' => date('Y-m-d H:i:s'),
                 'currency' => 'INR',
@@ -255,10 +257,10 @@ class ProductOrderController extends Controller
                 'tax' => 0,
                 'total_amount' => $order_details->total,
                 "user" => [
-                    "mobile_number" => '9888888888',
+                    "mobile_number" => auth()->check() ? auth()->user()->phone : '9888888888',
                     "email" => $order_details->billing_email,
-                    "first_name" => 'Dummy First Name',
-                    "last_name" => 'Dummy Last Name',
+                    "first_name" => auth()->check() ? auth()->user()->name :'Dummy First Name',
+                    "last_name" => auth()->check() ? auth()->user()->name :'Dummy Last Name',
                 ],
                 'shipping_address' => [
                     'area' => $order_details->shipping_town,
@@ -267,6 +269,7 @@ class ProductOrderController extends Controller
                     'pincode' => '400063',
                     'address_type' => $order_details->billing_street_address
                 ],
+                "order_id"=> $order_details->id,
                 "order_line_items" => [
                     [
                         "title" => __('Payment For Product Order').' #'.$order_details,
@@ -281,7 +284,6 @@ class ProductOrderController extends Controller
                     ]
                 ]
             );
-            
             return $redirect_url = nimbbl_gateway()->charge_customer($order_data);
         }
 
@@ -384,6 +386,23 @@ class ProductOrderController extends Controller
         return redirect()->route('frontend.product.payment.cancel',$payment_logs->id);
 
     }
+
+    public function nimbbl_callback($id,$currency,$total_amount,Request $request)
+    {
+        $callback=json_decode(base64_decode($request->response));
+        $callback->currency=$currency;
+        $callback->total_amount=$total_amount;
+        $payment = nimbbl_gateway()->ipn_response($callback);
+        if($payment)
+        {
+            return redirect()->route('frontend.product.payment.success',$id);
+        }else{
+            return redirect()->route('frontend.product.payment.cancel',$id);
+        }
+
+
+    }
+
 
     public function stripe_charge(Request $request){
         $order_details = ProductOrder::findOrFail($request->order_id);

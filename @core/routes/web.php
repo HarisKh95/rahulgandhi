@@ -110,6 +110,7 @@ Route::group(['middleware' =>['setlang:frontend','globalVariable','maintains_mod
     //product payment ipn
     Route::get('/product-paypal-ipn', 'Product\ProductOrderController@paypal_ipn')->name('frontend.product.paypal.ipn');
     Route::post('/product-paytm-ipn', 'Product\ProductOrderController@paytm_ipn')->name('frontend.product.paytm.ipn');
+    Route::get('/product-nimbbl-ipn/{id}/{currency}/{total_amount}', 'Product\ProductOrderController@nimbbl_callback')->name('frontend.product.nimbbl.ipn');
     Route::post('/product-stripe', 'Product\ProductOrderController@stripe_ipn')->name('frontend.product.stripe.ipn');
     Route::get('/product-stripe/pay', 'Product\ProductOrderController@stripe_success')->name('frontend.product.stripe.success');
     Route::post('/product-razorpay', 'Product\ProductOrderController@razorpay_ipn')->name('frontend.product.razorpay.ipn');

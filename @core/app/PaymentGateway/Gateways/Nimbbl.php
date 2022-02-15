@@ -3,8 +3,8 @@
 
 namespace App\PaymentGateway\Gateways;
 
-
 use App\PaymentGateway\PaymentGatewayBase;
+
 use Nimbbl\Api\NimbblApi;
 use Nimbbl\Api\NimbblError;
 use Nimbbl\Api\NimbblErrorCode;
@@ -24,11 +24,11 @@ class Nimbbl extends PaymentGatewayBase
     private $_api;
     /**
       * */
-    // public function __construct(){
-    //     /** Nimbbl api  **/
-    //     $nimbbl_conf = config('nimbbl');
-    //     $this->_api = new NimbblApi($nimbbl_conf['access_key'],$nimbbl_conf['security_key']);
-    // }
+    public function __construct(){
+        /** Nimbbl api  **/
+        $nimbbl_conf = config('nimbbl');
+        $this->_api = new NimbblApi($nimbbl_conf['access_key'],$nimbbl_conf['security_key']);
+    }
 
     /**
      * this payment gateway will not work with this package
@@ -51,37 +51,60 @@ class Nimbbl extends PaymentGatewayBase
      * @return array|string[]
      *
      */
-    public function ipn_response(array $args)
+    public function ipn_response($args)
     {
-        // TODO: Implement ipn_response() method.
-        $request = $args['request'];
-        $api = $this->_api;
-        $order_data = array(
-            'order_id' => $request->order_id,
-            'payment_mode' => $request->payment_mode,
-            'transaction_id' => $request->transaction_id
-        );
 
+            $success = true;
 
-        //Fetch transaction information by nimbbl_transaction_id
-        $transaction = $api->transaction->transactionEnquiry($order_data);
+            // $error = "Payment Failed";
+            if (empty($args) === false)
+            {
 
-        if (!empty($transaction)) {
-            try {
-                $transaction = $api->transaction->retrieveOne($request->transaction_id);
-                if (empty($transaction)) {
-                    return ['status' => 'failed'];
+                if($args->payload->status=='failed')
+                {
+                    $success = false;
                 }
-                return $this->verified_data([
-                   'status' => 'complete',
-                   'transaction_id' =>  $request->transaction_id
-                ]);
-            } catch (\Exception $e) {
-                return ['status' => 'failed'];
-            }
-        }
+                else{
+                    $api = $this->_api;
+                    $nimbbl_transaction_id=$args->payload->nimbbl_transaction_id;
+                    $nimbbl_signature=$args->payload->nimbbl_signature;
+                    $currency=$args->currency;
+                    $total_amount=$args->total_amount;
+                    // dd($args->payload);
+                    try
+                    {
+                        // Please note that the Nimbbl order ID must
+                        // come from a trusted source (session here, but
+                        // could be database or something else)
+                        $attributes = array(
+                            'merchant_order_id' => session()->get('Merchant_order_id', 'merchant_order_id'),
+                            'nimbbl_transaction_id' => $nimbbl_transaction_id,
+                            'nimbbl_signature' => $nimbbl_signature,
+                            'order_amount' => floatval($total_amount),
+                            'order_currency' => $currency
+                        );
+    
+                        
+                        $api->util->verifyPaymentSignature($attributes);
+                    }
+                    catch(NimbblError $e)
+                    {
+                        $success = false;
+                        // $error = 'Nimbbl Error : ' . $e->getMessage();
+                    }
+                }
 
-        return ['status' => 'failed'];
+            }
+
+            if ($success === true)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
     }
 
     /**
@@ -98,12 +121,15 @@ class Nimbbl extends PaymentGatewayBase
      */
     public function charge_customer(array $args)
     {
+        // $data['id']=$args['order_id'];
+        // $data['currency']=$args['currency'];
+        // $data['total_amount']=$args['total_amount'];
         // TODO: Implement charge_customer() method.
         $api = $this->_api;
-        $nimbbl_conf = config('nimbbl');
-        $api = new NimbblApi($nimbbl_conf['access_key'],$nimbbl_conf['security_key']);
-            $newOrder = $api->order->create($args);
-        return view('payment.nimbbl')->with('order_data', $newOrder);
+        // $nimbbl_conf = config('nimbbl');
+        // $api = new NimbblApi($nimbbl_conf['access_key'],$nimbbl_conf['security_key']);
+        $newOrder = $api->order->create($args);
+        return view('payment.nimbbl')->with('order_data',$newOrder)->with('id',$args['order_id'])->with('currency',$args['currency'])->with('total_amount',$args['total_amount']);
     }
 
     public function supported_currency_list()
