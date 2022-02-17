@@ -119,16 +119,16 @@ class Nimbbl extends PaymentGatewayBase
      *
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
-    public function charge_customer(array $args)
+    public function charge_customer($args)
     {
-        // $data['id']=$args['order_id'];
-        // $data['currency']=$args['currency'];
-        // $data['total_amount']=$args['total_amount'];
+
         // TODO: Implement charge_customer() method.
         $api = $this->_api;
-        // $nimbbl_conf = config('nimbbl');
-        // $api = new NimbblApi($nimbbl_conf['access_key'],$nimbbl_conf['security_key']);
+        // dd(json_encode($args));
+        // dd($args);
         $newOrder = $api->order->create($args);
+        $newOrder = $api->order->create($args);
+        // dd($newOrder);
         return view('payment.nimbbl')->with('order_data',$newOrder)->with('id',$args['order_id'])->with('currency',$args['currency'])->with('total_amount',$args['total_amount']);
     }
 
