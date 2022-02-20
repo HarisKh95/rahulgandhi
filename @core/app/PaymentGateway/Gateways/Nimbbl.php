@@ -90,7 +90,6 @@ class Nimbbl extends PaymentGatewayBase
                     catch(NimbblError $e)
                     {
                         $success = false;
-                        // $error = 'Nimbbl Error : ' . $e->getMessage();
                     }
                 }
 

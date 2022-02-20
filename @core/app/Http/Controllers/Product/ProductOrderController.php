@@ -251,6 +251,7 @@ class ProductOrderController extends Controller
                 'referrer_platform' => 'referrer_platform',
                 'merchant_shopfront_domain' => 'http://localhost/rahulgandhi',
                 'invoice_id' =>Str::random(5).Str::random(5),
+                // 'invoice_id' =>'IoIeciopAcRdDR',
                 'order_date' => date('Y-m-d H:i:s'),
                 'currency' => 'INR',
                 'amount_before_tax' => $order_details->total,
@@ -389,17 +390,22 @@ class ProductOrderController extends Controller
 
     public function nimbbl_callback($id,$currency,$total_amount,Request $request)
     {
+        $payment_logs = ProductOrder::where( 'payment_track', $id )->first();
         $callback=json_decode(base64_decode($request->response));
         $callback->currency=$currency;
         $callback->total_amount=$total_amount;
+        // dd($callback->payload->nimbbl_transaction_id,$id);
+
         $payment = nimbbl_gateway()->ipn_response($callback);
         if($payment)
         {
-            return redirect()->route('frontend.product.payment.success',$id);
+            $this->update_database($id, $callback->payload->nimbbl_transaction_id);
+            $this->send_order_mail($id);
+            $order_id = Str::random(6) . $id. Str::random(6);
+            return redirect()->route('frontend.product.payment.success',$order_id);
         }else{
             return redirect()->route('frontend.product.payment.cancel',$id);
         }
-
 
     }
 
